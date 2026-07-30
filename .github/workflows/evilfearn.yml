@@ -1,0 +1,56 @@
+name: 3vilFearn IPA Signer v0.1
+
+on:
+  workflow_dispatch:
+    inputs:
+      ipa_file:
+        description: "Upload the IPA to sign"
+        required: true
+      ios_target:
+        description: "Target iOS version (26 or 27)"
+        required: true
+        default: "27"
+      enable_jailbreak_mode:
+        description: "Enable jailbreak signing mode"
+        required: false
+        default: "false"
+      enable_icon_edit:
+        description: "Enable icon editing"
+        required: false
+        default: "false"
+      enable_entitlement_edit:
+        description: "Enable entitlement patching"
+        required: false
+        default: "true"
+
+jobs:
+  sign:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install python3 jq unzip zip
+
+      - name: Prepare 3vilFearn signer
+        run: |
+          chmod +x 3vilFearn/sign.sh
+          mkdir output
+
+      - name: Run 3vilFearn signer
+        run: |
+          ./3vilFearn/sign.sh \
+            --ipa "${{ github.event.inputs.ipa_file }}" \
+            --ios "${{ github.event.inputs.ios_target }}" \
+            --jailbreak "${{ github.event.inputs.enable_jailbreak_mode }}" \
+            --iconedit "${{ github.event.inputs.enable_icon_edit }}" \
+            --entitlements "${{ github.event.inputs.enable_entitlement_edit }}"
+
+      - name: Upload signed IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3vilFearn-signed-ipa
+          path: output/
