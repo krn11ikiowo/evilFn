@@ -1,0 +1,144 @@
+name: Import FeatherSigner (One-by-One Commits)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  import-feathersigner:
+    runs-on: macos-latest
+    continue-on-error: true
+
+    steps:
+      # ---------------------------------------------------------
+      # Checkout your repo
+      # ---------------------------------------------------------
+      - name: Checkout your repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "feather-import-bot"
+          git config user.email "bot@feather.local"
+
+      # ---------------------------------------------------------
+      # Clone FeatherSigner repo
+      # ---------------------------------------------------------
+      - name: Clone FeatherSigner
+        continue-on-error: true
+        run: |
+          echo "Cloning FeatherSigner..."
+          git clone https://github.com/makkuenon/FeatherSigner feather-source
+
+      # ---------------------------------------------------------
+      # Create destination folders
+      # ---------------------------------------------------------
+      - name: Create destination folders
+        continue-on-error: true
+        run: |
+          mkdir -p feather-src
+          mkdir -p feather-assets
+          mkdir -p feather-config
+          mkdir -p feather-scripts
+          mkdir -p feather-ui
+          mkdir -p feather-other
+
+      # ---------------------------------------------------------
+      # Sort FeatherSigner files
+      # ---------------------------------------------------------
+      - name: Sort FeatherSigner files
+        continue-on-error: true
+        run: |
+          echo "Sorting FeatherSigner files..."
+
+          # Source code
+          find feather-source -type f `\( -name "*.swift" -o -name "*.m" -o -name "*.mm" -o -name "*.h" -o -name "*.cpp" \)` \
+            -exec cp {} feather-src/ \;
+
+          # Assets
+          find feather-source -type f `\( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" \)` \
+            -exec cp {} feather-assets/ \;
+
+          # Config
+          find feather-source -type f `\( -name "*.plist" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \)` \
+            -exec cp {} feather-config/ \;
+
+          # Scripts
+          find feather-source -type f `\( -name "*.sh" -o -name "*.py" \)` \
+            -exec cp {} feather-scripts/ \;
+
+          # UI
+          find feather-source -type f `\( -name "*.storyboard" -o -name "*.xib" \)` \
+            -exec cp {} feather-ui/ \;
+
+          # Everything else
+          find feather-source -type f \
+            -exec cp {} feather-other/ \;
+
+      # ---------------------------------------------------------
+      # One-by-one commits for FeatherSigner files
+      # ---------------------------------------------------------
+      - name: Commit FeatherSigner files one-by-one
+        continue-on-error: true
+        run: |
+          echo "Starting one-by-one commits..."
+
+          for file in $(find feather-src feather-assets feather-config feather-scripts feather-ui feather-other -type f); do
+            echo "Committing $file..."
+
+            git add "$file"
+
+            attempts=0
+            max_attempts=3
+            success=false
+
+            while [ $attempts -lt $max_attempts ]; do
+              attempts=$((attempts+1))
+              echo "Commit attempt $attempts for $file..."
+
+              if git commit -m "Add FeatherSigner file: $file"; then
+                echo "Commit succeeded."
+
+                if git push; then
+                  echo "Push succeeded."
+                  success=true
+                  break
+                else
+                  echo "Push failed, retrying..."
+                  git pull --rebase || true
+                fi
+              else
+                echo "Commit failed, retrying..."
+                git pull --rebase || true
+              fi
+
+              sleep 3
+            done
+
+            if [ "$success" = true ]; then
+              echo "Completed commit for $file."
+            else
+              echo "Failed commit for $file after retries."
+            fi
+          done
+
+      # ---------------------------------------------------------
+      # Summary bot
+      # ---------------------------------------------------------
+      - name: Summary bot
+        continue-on-error: true
+        run: |
+          echo "FeatherSigner Import Summary" > feather-summary.txt
+          echo "Completed at: $(date)" >> feather-summary.txt
+          echo "Files imported individually." >> feather-summary.txt
+
+          git add feather-summary.txt
+          git commit -m "FeatherSigner import summary" || true
+          git push || true
