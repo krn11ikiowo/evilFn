@@ -1,4 +1,4 @@
-name: Import MySign Source Files
+name: Import MySign Source Files (Multi-Folder)
 
 on:
   workflow_dispatch:
@@ -38,22 +38,57 @@ jobs:
           git clone https://github.com/makkuenon/MySign mysign-source
 
       # ---------------------------------------------------------
-      # Copy all MySign source files into your repo
+      # Create destination folders
       # ---------------------------------------------------------
-      - name: Copy MySign source files
+      - name: Create destination folders
         continue-on-error: true
         run: |
-          echo "Copying MySign source files..."
-          mkdir -p imported-mysign
-          cp -R mysign-source/* imported-mysign/ || true
+          mkdir -p mysign-src
+          mkdir -p mysign-assets
+          mkdir -p mysign-config
+          mkdir -p mysign-scripts
+          mkdir -p mysign-ui
+          mkdir -p mysign-other
 
       # ---------------------------------------------------------
-      # Commit & push MySign source files
+      # Auto-sort MySign files into separate folders
       # ---------------------------------------------------------
-      - name: Commit MySign source files
+      - name: Sort MySign files
         continue-on-error: true
         run: |
-          git add imported-mysign/
+          echo "Sorting MySign files..."
+
+          # Source code (.swift, .m, .mm, .h, .cpp)
+          find mysign-source -type f `\( -name "*.swift" -o -name "*.m" -o -name "*.mm" -o -name "*.h" -o -name "*.cpp" \)` \
+            -exec cp {} mysign-src/ \;
+
+          # Assets (.png, .jpg, .jpeg, .gif, .svg)
+          find mysign-source -type f `\( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" \)` \
+            -exec cp {} mysign-assets/ \;
+
+          # Config files (.plist, .json, .yaml, .yml)
+          find mysign-source -type f `\( -name "*.plist" -o -name "*.json" -o -name "*.yaml" -o -name "*.yml" \)` \
+            -exec cp {} mysign-config/ \;
+
+          # Scripts (.sh, .py)
+          find mysign-source -type f `\( -name "*.sh" -o -name "*.py" \)` \
+            -exec cp {} mysign-scripts/ \;
+
+          # UI files (.storyboard, .xib)
+          find mysign-source -type f `\( -name "*.storyboard" -o -name "*.xib" \)` \
+            -exec cp {} mysign-ui/ \;
+
+          # Everything else
+          find mysign-source -type f \
+            -exec cp {} mysign-other/ \;
+
+      # ---------------------------------------------------------
+      # Commit & push sorted files
+      # ---------------------------------------------------------
+      - name: Commit sorted MySign files
+        continue-on-error: true
+        run: |
+          git add mysign-src/ mysign-assets/ mysign-config/ mysign-scripts/ mysign-ui/ mysign-other/
 
           attempts=0
           max_attempts=3
@@ -68,7 +103,7 @@ jobs:
               break
             fi
 
-            if git commit -m "Import MySign source files"; then
+            if git commit -m "Import MySign source files (sorted into folders)"; then
               echo "Commit succeeded."
 
               if git push; then
@@ -99,9 +134,15 @@ jobs:
       - name: Summary bot
         continue-on-error: true
         run: |
-          echo "MySign Import Summary" > import-summary.txt
+          echo "MySign Multi-Folder Import Summary" > import-summary.txt
           echo "Completed at: $(date)" >> import-summary.txt
-          echo "Imported directory: imported-mysign/" >> import-summary.txt
+          echo "Folders created:" >> import-summary.txt
+          echo "- mysign-src/" >> import-summary.txt
+          echo "- mysign-assets/" >> import-summary.txt
+          echo "- mysign-config/" >> import-summary.txt
+          echo "- mysign-scripts/" >> import-summary.txt
+          echo "- mysign-ui/" >> import-summary.txt
+          echo "- mysign-other/" >> import-summary.txt
 
           git add import-summary.txt
           git commit -m "MySign import summary" || true
