@@ -1,4 +1,4 @@
-name: Import FeatherSigner (One-by-One Commits)
+name: Import Feather (One-by-One Commits)
 
 on:
   workflow_dispatch:
@@ -10,14 +10,11 @@ permissions:
   contents: write
 
 jobs:
-  import-feathersigner:
+  import-feather:
     runs-on: macos-latest
     continue-on-error: true
 
     steps:
-      # ---------------------------------------------------------
-      # Checkout your repo
-      # ---------------------------------------------------------
       - name: Checkout your repository
         uses: actions/checkout@v4
         with:
@@ -28,18 +25,12 @@ jobs:
           git config user.name "feather-import-bot"
           git config user.email "bot@feather.local"
 
-      # ---------------------------------------------------------
-      # Clone FeatherSigner repo
-      # ---------------------------------------------------------
-      - name: Clone FeatherSigner
+      - name: Clone Feather
         continue-on-error: true
         run: |
-          echo "Cloning FeatherSigner..."
-          git clone https://github.com/makkuenon/FeatherSigner feather-source
+          echo "Cloning Feather..."
+          git clone https://github.com/claration/Feather feather-source
 
-      # ---------------------------------------------------------
-      # Create destination folders
-      # ---------------------------------------------------------
       - name: Create destination folders
         continue-on-error: true
         run: |
@@ -50,13 +41,10 @@ jobs:
           mkdir -p feather-ui
           mkdir -p feather-other
 
-      # ---------------------------------------------------------
-      # Sort FeatherSigner files
-      # ---------------------------------------------------------
-      - name: Sort FeatherSigner files
+      - name: Sort Feather files
         continue-on-error: true
         run: |
-          echo "Sorting FeatherSigner files..."
+          echo "Sorting Feather files..."
 
           # Source code
           find feather-source -type f `\( -name "*.swift" -o -name "*.m" -o -name "*.mm" -o -name "*.h" -o -name "*.cpp" \)` \
@@ -82,10 +70,7 @@ jobs:
           find feather-source -type f \
             -exec cp {} feather-other/ \;
 
-      # ---------------------------------------------------------
-      # One-by-one commits for FeatherSigner files
-      # ---------------------------------------------------------
-      - name: Commit FeatherSigner files one-by-one
+      - name: Commit Feather files one-by-one
         continue-on-error: true
         run: |
           echo "Starting one-by-one commits..."
@@ -103,7 +88,7 @@ jobs:
               attempts=$((attempts+1))
               echo "Commit attempt $attempts for $file..."
 
-              if git commit -m "Add FeatherSigner file: $file"; then
+              if git commit -m "Add Feather file: $file"; then
                 echo "Commit succeeded."
 
                 if git push; then
@@ -129,16 +114,13 @@ jobs:
             fi
           done
 
-      # ---------------------------------------------------------
-      # Summary bot
-      # ---------------------------------------------------------
       - name: Summary bot
         continue-on-error: true
         run: |
-          echo "FeatherSigner Import Summary" > feather-summary.txt
+          echo "Feather Import Summary" > feather-summary.txt
           echo "Completed at: $(date)" >> feather-summary.txt
-          echo "Files imported individually." >> feather-summary.txt
+          echo "Files imported individually from clariation/Feather." >> feather-summary.txt
 
           git add feather-summary.txt
-          git commit -m "FeatherSigner import summary" || true
+          git commit -m "Feather import summary" || true
           git push || true
