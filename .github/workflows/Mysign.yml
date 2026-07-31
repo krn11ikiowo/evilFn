@@ -1,0 +1,108 @@
+name: Import MySign Source Files
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  import-mysign:
+    runs-on: macos-latest
+    continue-on-error: true
+
+    steps:
+      # ---------------------------------------------------------
+      # Checkout your repo
+      # ---------------------------------------------------------
+      - name: Checkout your repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "mysign-import-bot"
+          git config user.email "bot@mysign.local"
+
+      # ---------------------------------------------------------
+      # Clone MySign repo
+      # ---------------------------------------------------------
+      - name: Clone MySign repository
+        continue-on-error: true
+        run: |
+          echo "Cloning MySign..."
+          git clone https://github.com/makkuenon/MySign mysign-source
+
+      # ---------------------------------------------------------
+      # Copy all MySign source files into your repo
+      # ---------------------------------------------------------
+      - name: Copy MySign source files
+        continue-on-error: true
+        run: |
+          echo "Copying MySign source files..."
+          mkdir -p imported-mysign
+          cp -R mysign-source/* imported-mysign/ || true
+
+      # ---------------------------------------------------------
+      # Commit & push MySign source files
+      # ---------------------------------------------------------
+      - name: Commit MySign source files
+        continue-on-error: true
+        run: |
+          git add imported-mysign/
+
+          attempts=0
+          max_attempts=3
+          success=false
+
+          while [ $attempts -lt $max_attempts ]; do
+            attempts=$((attempts+1))
+            echo "Commit attempt $attempts..."
+
+            if git diff --cached --quiet; then
+              echo "No changes to commit."
+              break
+            fi
+
+            if git commit -m "Import MySign source files"; then
+              echo "Commit succeeded."
+
+              if git push; then
+                echo "Push succeeded."
+                success=true
+                break
+              else
+                echo "Push failed, retrying..."
+                git pull --rebase || true
+              fi
+            else
+              echo "Commit failed, retrying..."
+              git pull --rebase || true
+            fi
+
+            sleep 5
+          done
+
+          if [ "$success" = true ]; then
+            echo "MySign import completed."
+          else
+            echo "MySign import failed after retries."
+          fi
+
+      # ---------------------------------------------------------
+      # Summary bot
+      # ---------------------------------------------------------
+      - name: Summary bot
+        continue-on-error: true
+        run: |
+          echo "MySign Import Summary" > import-summary.txt
+          echo "Completed at: $(date)" >> import-summary.txt
+          echo "Imported directory: imported-mysign/" >> import-summary.txt
+
+          git add import-summary.txt
+          git commit -m "MySign import summary" || true
+          git push || true
