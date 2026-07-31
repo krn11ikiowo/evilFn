@@ -1,3 +1,9 @@
-MySign Import Summary
-Completed at: Fri Jul 31 02:22:34 UTC 2026
-Imported directory: imported-mysign/
+MySign Multi-Folder Import Summary
+Completed at: Fri Jul 31 02:23:34 UTC 2026
+Folders created:
+- mysign-src/
+- mysign-assets/
+- mysign-config/
+- mysign-scripts/
+- mysign-ui/
+- mysign-other/
